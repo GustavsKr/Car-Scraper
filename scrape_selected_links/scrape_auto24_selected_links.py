@@ -128,37 +128,6 @@ async def scrape_auto24_selected_links(browser, url, db_controller, scraper):
                 body_type = body_type.split(' (')[0]
                 body_type = scraper.translate_body_type(body_type)
 
-            # Scrape description
-            description=None
-            try:
-                raw_text = await page.eval_on_selector(
-                ".-user_other",
-                "el => el.innerHTML"
-                )
-                if raw_text:
-                    description = raw_text.replace("<br>", " ")
-                    description = re.sub(r'\s+', ' ', description).strip()
-            except Exception:
-                description = None
-
-
-            # Scrape phone and company
-            try:
-                phone = await page.eval_on_selector(
-                    "#pn-value .value",
-                    "el => el.textContent.trim()"
-                )
-                phone = phone.replace(" ", "")
-            except Exception:
-                phone = None
-            try:
-                company = await page.eval_on_selector(
-                    "h2.commonSubtitle a",
-                    "el => el.textContent.trim()"
-                )
-            except Exception:
-                company = None
-
             # Scrape color
             color_element = await page.query_selector("tr.field-varvus span.value")
             color = (await color_element.text_content()).lower() if color_element else None

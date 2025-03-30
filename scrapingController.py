@@ -1,10 +1,14 @@
-import re, unicodedata, difflib
+import re, unicodedata, difflib, json
 from difflib import get_close_matches
 from utils.logger import logger
 
 class ScrapingController:
     def __init__(self):
-        pass
+        with open("json/carData.json", "r", encoding="utf-8") as file:
+            data = json.load(file)
+        self.car_brands = data.get("car_brand")
+        self.areas = data.get("area")
+
     def clean_text(self, text):
         """Filters out unwanted characters and whitespaces (allow only letters, numbers, and dots)."""
         return re.sub(r'[^a-zA-Z0-9.]', '', text).strip()
@@ -67,7 +71,7 @@ class ScrapingController:
         """
         if not car_brand:
             return None
-        car_brand.replace("+", "plus").lower()
+        car_brand = car_brand.replace("+", "plus").lower()
         car_brand = re.sub(r'[\s&()!-]+', '', car_brand) if car_brand else None 
         if car_brand in ["vw", "wv"]:
             car_brand = "volkswagen"

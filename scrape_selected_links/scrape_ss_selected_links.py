@@ -11,7 +11,6 @@ async def scrape_ss_selected_links(browser, url, db_controller, scraper):
             url_response = session.get(url)
             soup = BeautifulSoup(url_response.text, "html.parser")
 
-
             # Set all variables to None
             deal_type = car_brand = car_model = area = img_url = scraped_price = brand_model = run = \
             engine_type = volume = gearbox = body_type = listing_date = scraped_checkup = volume_engine = company = None
@@ -56,41 +55,6 @@ async def scrape_ss_selected_links(browser, url, db_controller, scraper):
             if scraped_price == 'call':
                 scraped_price = None
                 
-            # Extract listing_date seperately
-            try:
-                listing_dates = soup.find_all('td', class_='msg_footer')
-                for date_cell in listing_dates:
-                    date_text = date_cell.text.strip()  # Get the text and strip whitespace
-                    if date_text.startswith("Date: "):
-                        date_str = date_text.replace("Date: ", "").strip()
-                        listing_date = datetime.strptime(date_str, "%d.%m.%Y %H:%M")
-                        break
-                if listing_date is None:
-                    logger.warning("No valid listing date found.")
-            except Exception as e:
-                logger.error(f"Error scraping listing_date: {e}")
-                listing_date = None
-
-            # Extract description
-            description = ""  # Initialize as an empty string
-            for element in soup.find(id="msg_div_msg").contents:
-                if element.name == 'table':  # Stop at the first table
-                    break
-                if element.name == 'br':  # Text directly between <br> elements
-                    description += ' '
-                elif isinstance(element, str):  # Raw text within the div
-                    description += element.strip() + ' '
-                elif element:  # Other wrapped elements
-                    description += element.get_text(strip=True) + ' '
-            description = ' '.join(description.split())
-            if not description:
-                description = None
-
-            # Scrape company
-            company_element = soup.find("td", class_="ads_contacts_name", string="Company:")
-            if company_element:
-                company = company_element.find_next_sibling("td").get_text(strip=True)
-
             # Extract the rest of car parameters separately
             if "transport/cars" in url:
                 volume_engine = scraper.bs4_scrape_element(soup, 'td[id="tdo_15"]')
@@ -121,7 +85,7 @@ async def scrape_ss_selected_links(browser, url, db_controller, scraper):
                     run = run.replace(' ', '')      
                     run = int(run)              
                 body_type = scraper.bs4_scrape_element(soup, 'td[id="tdo_32"]')
-                                
+
                 # Scraping brand and model
                 if len(headtitle_links) >= 3:
                     car_brand = headtitle_links[1].text.strip().lower()
@@ -158,6 +122,8 @@ async def scrape_ss_selected_links(browser, url, db_controller, scraper):
                     color = "red"
                 color = scraper.translate_color(color)
                 year = scraper.bs4_scrape_element(soup, 'td[id="tdo_18"]').split()[0] if scraper.bs4_scrape_element(soup, 'td[id="tdo_18"]') else None,
+                body_type = scraper.translate_body_type(body_type)
+                engine_type = scraper.translate_engine_type(engine_type)
 
                 if car_brand:
                     db_controller.add_to_cars_table(
@@ -177,7 +143,6 @@ async def scrape_ss_selected_links(browser, url, db_controller, scraper):
                         deal_type=deal_type,
                         run=run,
                         checkup=scraped_checkup,
-                        is_matched=False,
                         fetching_date=datetime.now()
                     )
                     logger.info(f"ADDED {url} to ss_cars")

@@ -1,7 +1,7 @@
 from scrape_selected_links import *
 from dbController import DbController
 from scrapingController import ScrapingController
-from utils.config import DB_CONNECTION_STRING, ss_links
+from utils.config import DB_CONNECTION_STRING, newest_links
 from utils.logger import logger
 from playwright.async_api import async_playwright
 
@@ -9,7 +9,7 @@ import asyncio, random
 
 
 async def scrape_newest_links(browser, db_controller, website, url):
-    global ss_links
+    global newest_links
     while True:
         try:
             context = await browser.new_context(
@@ -89,10 +89,18 @@ async def scrape_newest_links(browser, db_controller, website, url):
                     
                     links_to_insert = list(links_to_insert)
 
-                    # Batch insert new links
+                    # Batch insert new links if there are no duplicates in the last 20 entries
                     if links_to_insert:
-                        logger.info(f"Storing {len(links_to_insert)} {website} links to ss_links")
-                        ss_links.extend(links_to_insert)
+                        last_20_urls = [entry["url"] for entry in newest_links[-20:]]
+
+                        new_entries = []
+                        for url in links_to_insert:
+                            if url not in last_20_urls:
+                                new_entries.append({"url": url, "is_scraped": 0})
+
+                        if new_entries:
+                            logger.info(f"Appending {len(new_entries)} new {website} links to newest_links")
+                            newest_links.extend(new_entries)
 
                     # Reload the page for new data
                     await asyncio.sleep(1)
@@ -119,33 +127,39 @@ async def scrape_newest_links(browser, db_controller, website, url):
 async def scrape_selected_links(browser, db_controller, scraper):
     try:
         logger.warning("Successfully started scrape_selected_links")
-        global ss_links
+        global newest_links
         tasks = []
         while True:
             await asyncio.sleep(2)  # Allow other tasks to run
             try:
-                if ss_links:
-                    for url in ss_links:
-                        # Determine the appropriate scraper
-                        scraper_map = {
-                            "eng.auto24.ee": scrape_auto24_selected_links,
-                            "skelbiu.lt": scrape_autoplius_selected_links,
-                            "ss.com": scrape_ss_selected_links, # Using BS4/Requests instead of playwright (faster and less resource intensive)
-                        }
-                        for key, func in scraper_map.items():
-                            if key in url:
-                                task = asyncio.create_task(
-                                    scrape_with_timeout(
-                                        func(browser, url, db_controller, scraper),
-                                        timeout=90
+                if newest_links:
+                    for entry in newest_links:
+                        url = entry.get("url")
+                        if entry.get("is_scraped") == 0:
+                            # Determine the appropriate scraper
+                            entry["is_scraped"] = 1
+                            scraper_map = {
+                                "eng.auto24.ee": scrape_auto24_selected_links,
+                                "skelbiu.lt": scrape_autoplius_selected_links,
+                                "ss.com": scrape_ss_selected_links, # Using BS4/Requests instead of playwright (faster and less resource intensive)
+                            }
+                            for key, func in scraper_map.items():
+                                if key in url:
+                                    task = asyncio.create_task(
+                                        scrape_with_timeout(
+                                            func(browser, url, db_controller, scraper),
+                                            timeout=90
+                                        )
                                     )
-                                )
-                                tasks.append(task)
-                                await asyncio.sleep(1)  # Delay to avoid overwhelming resources
-                                break
+                                    tasks.append(task)
+                                    await asyncio.sleep(1)  # Delay to avoid overwhelming resources
+                                    break
                 # Clean up completed and cancelled tasks
                 if tasks:
                     tasks = [task for task in tasks if not task.done()]
+                # Keep only the first 10 entries in newest_links
+                if len(newest_links) > 10:
+                    newest_links = newest_links[:10]
             except Exception as e:
                 logger.exception(f"Error while processing links: {e}")
     except asyncio.CancelledError:
@@ -208,12 +222,12 @@ async def scrape_links_headless(scraper, db_controller):
                 tasks = []
                 try:
                     tasks = [
-                        # Seperate pages that refresh and scrape the newest links and put them in ss_links variable
+                        # Seperate pages that refresh and scrape the newest links and put them in newest_links variable
                         asyncio.create_task(scrape_newest_links(browser, db_controller, "eng.auto24.ee", "https://eng.auto24.ee/kasutatud/nimekiri.php?bn=2&a=100&aj=&ssid=221873451&j%5B%5D=1&j%5B%5D=2&j%5B%5D=3&j%5B%5D=4&j%5B%5D=5&j%5B%5D=6&j%5B%5D=61&j%5B%5D=7&j%5B%5D=8&j%5B%5D=69&j%5B%5D=70&j%5B%5D=9&j%5B%5D=10&j%5B%5D=11&ae=1&af=20&by=2&otsi=search")),
                         asyncio.create_task(scrape_newest_links(browser, db_controller, "skelbiu.lt", "https://www.skelbiu.lt/skelbimai/?autocompleted=1&keywords=&cost_min=&cost_max=&type=1&year_min=&year_max=&transmission=0&engine_min=&engine_max=&power_min=&power_max=&mileage_min=&mileage_max=&cities=0&distance=0&mainCity=0&search=1&category_id=31&user_type=0&ad_since_min=0&ad_since_max=0&visited_page=1&orderBy=1&detailsSearch=1")),
                         asyncio.create_task(scrape_newest_links(browser, db_controller, "ss.com", "https://www.ss.com/en/transport/today/")),
 
-                        # Function for scraping newest links from ss_links variable
+                        # Function for scraping newest links from newest_links variable
                         asyncio.create_task(scrape_selected_links(browser, db_controller, scraper)),
                     ]
                     logger.warning("Headless browser succesfully started")
