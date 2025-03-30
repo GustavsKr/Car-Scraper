@@ -83,7 +83,6 @@ class SsCars(Base):
     deal_type = Column(String(15))
     run = Column(Integer)
     checkup = Column(String(7))  # Format: MM.YYYY
-    is_matched = Column(Boolean, default=False)
     fetching_date = Column(TIMESTAMP, default=func.now())
 
 class Auto24Cars(Base):
@@ -152,7 +151,6 @@ class Auto24Cars(Base):
     deal_type = Column(String(15))
     run = Column(Integer)
     checkup = Column(String(7))  # Format: MM.YYYY
-    is_matched = Column(Boolean, default=False)
     fetching_date = Column(TIMESTAMP, default=func.now())
 
 class AutopliusCars(Base):
@@ -221,7 +219,6 @@ class AutopliusCars(Base):
     deal_type = Column(String(15))
     run = Column(Integer)
     checkup = Column(String(7))  # Format: MM.YYYY
-    is_matched = Column(Boolean, default=False)
     fetching_date = Column(TIMESTAMP, default=func.now())
 
 
