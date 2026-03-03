@@ -1,4 +1,4 @@
-# 🚗 Baltic Car Marketplace Scraper
+# Baltic Car Marketplace Scraper
 
 A real-time car scraper that monitors and collects listings from major Baltic marketplaces:
 
@@ -10,16 +10,16 @@ The app scrapes the **newest listings every second**, processes their data, and 
 
 ---
 
-## 🛠️ Technologies Used
+## Technologies Used
 
 - **Python**
-- **MySQL + SQLAlchemy**
+- **MySQL (SQLAlchemy)**
 - **Playwright (async)**
 - **BeautifulSoup + Requests**
 
 ---
 
-## 🗃️ Database Overview
+## Database Overview
 
 Data is stored in **three separate tables** based on source:
 
@@ -27,7 +27,7 @@ Data is stored in **three separate tables** based on source:
 - `autoplius_cars`
 - `auto24_cars`
 
-### 📋 Columns (shared across all tables)
+### Columns (shared across all tables)
 
 | Column         | Type             | Description                           |
 |----------------|------------------|---------------------------------------|
@@ -51,7 +51,7 @@ Data is stored in **three separate tables** based on source:
 
 ---
 
-## 🔔 Use Cases
+## Use Cases
 
-- 📬 Notify yourself when certain listings appear (via Gmail, Telegram, etc.)
-- 📊 Analyze car prices, trends, or availability
+- Notify yourself when certain listings appear (via Gmail, Telegram, etc.)
+- Analyze car prices, trends, or availability
